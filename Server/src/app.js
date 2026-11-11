@@ -9,6 +9,7 @@ export function createApp() {
   app.use(cors({ origin: env.clientOrigin }));
   app.use(express.json({ limit: "1mb" }));
   app.get("/health", (_req, res) => res.json({ status: "ok", service: "virtual-kam-api" }));
+  app.use(express.static("public"));
   app.use("/api/v1", apiRoutes);
   app.use(notFound);
   app.use(errorHandler);

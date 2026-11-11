@@ -1,6 +1,5 @@
 
 import {
-  AudioLines,
   Headphones,
   Mic,
   Phone,
@@ -9,16 +8,24 @@ import {
   CheckCircle2,
   CalendarCheck,
   LoaderCircle,
+  Download,
   Package,
   Users,
   Wallet,
   ClipboardCheck,
 } from "lucide-react";
+import { jsPDF } from "jspdf";
 
-import { useEffect, useRef } from "react";
+import { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
+import ParticleMorphOrb from "../../../components/ui/ParticleMorphOrb.tsx";
+import {
+  Conversation,
+  ConversationBubble,
+  ConversationContent,
+} from "../../../components/ui/conversation.tsx";
 import { useLiveVoice } from "../hooks/useLiveVoice.js";
 
-export default function VoiceWorkspace() {
+const VoiceWorkspace = forwardRef(function VoiceWorkspace({ onStatusChange }, ref) {
   const {
     status,
     transcript,
@@ -34,20 +41,101 @@ export default function VoiceWorkspace() {
   const live =
     status === "connected" || status === "connecting";
 
+  const downloadReport = () => {
+    if (!report) return;
+    const pdf = new jsPDF();
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
+    const margin = 18;
+    const contentWidth = pageWidth - margin * 2;
+    let cursorY = margin;
+
+    const addWrappedText = (text, fontSize = 10, lineHeight = 5) => {
+      pdf.setFontSize(fontSize);
+      const lines = pdf.splitTextToSize(String(text), contentWidth);
+      lines.forEach((line) => {
+        if (cursorY > pageHeight - margin) {
+          pdf.addPage();
+          cursorY = margin;
+        }
+        pdf.text(line, margin, cursorY);
+        cursorY += lineHeight;
+      });
+    };
+
+    const addSection = (heading, content) => {
+      cursorY += 4;
+      pdf.setFont("helvetica", "bold");
+      addWrappedText(heading, 12, 6);
+      pdf.setFont("helvetica", "normal");
+      addWrappedText(content);
+    };
+
+    pdf.setFont("helvetica", "bold");
+    addWrappedText("VIRTUAL KAM - SELLER ACTION PLAN", 16, 8);
+    pdf.setFont("helvetica", "normal");
+    addWrappedText(`Seller: ${report.sellerName || "Not provided"}`);
+    addWrappedText(`Store: ${report.storeName || "Not provided"}`);
+
+    addSection("SUMMARY", report.overallSummary || "Not available.");
+    addSection(
+      "IDENTIFIED ISSUES",
+      report.issues?.length
+        ? report.issues
+          .map((issue, index) => `${index + 1}. ${issue.title} (${issue.status})\n${issue.evidence}`)
+          .join("\n\n")
+        : "No specific issues identified.",
+    );
+    addSection(
+      "SELLER CONSTRAINTS",
+      report.sellerConstraints?.length
+        ? report.sellerConstraints.map((item) => `- ${item}`).join("\n")
+        : "None discussed.",
+    );
+    addSection(
+      "RECOMMENDED ACTIONS",
+      report.recommendations?.length
+        ? report.recommendations
+          .map((item, index) => `${index + 1}. ${item.action} [${item.priority}]\n${item.reason}`)
+          .join("\n\n")
+        : "No recommendations available.",
+    );
+    addSection(
+      "FOLLOW-UP",
+      [
+        `Timeframe: ${report.followUp?.timeframe || "Not agreed"}`,
+        `Next step: ${report.followUp?.agreedNextStep || "Not discussed"}`,
+        report.followUp?.metricsToReview?.length
+          ? `Metrics to review:\n${report.followUp.metricsToReview.map((metric) => `- ${metric}`).join("\n")}`
+          : "",
+      ].filter(Boolean).join("\n"),
+    );
+
+    pdf.save("virtual-kam-seller-action-plan.pdf");
+  };
+
+  useImperativeHandle(ref, () => ({ stop }), [stop]);
+
   useEffect(() => {
     endRef.current?.scrollIntoView({
       behavior: "smooth",
     });
   }, [transcript]);
 
+  useEffect(() => {
+    onStatusChange?.(status);
+  }, [status, onStatusChange]);
+
   return (
     <article className="panel call-panel">
       <div className="section-kicker">YOUR VIRTUAL KAM</div>
 
-      <div className={`orb-wrap ${live ? "active" : ""}`}>
-        <div className="orb">
-          <AudioLines size={36} />
-        </div>
+      <div className={`orb-wrap particle-morph-wrap ${live ? "active" : ""}`}>
+        <ParticleMorphOrb
+          className="particle-morph-orb"
+          size={94}
+          speed={live ? 1.12 : 0.72}
+        />
       </div>
 
       <h2>
@@ -98,17 +186,19 @@ export default function VoiceWorkspace() {
             Your conversation transcript will appear here.
           </div>
         ) : (
-          transcript.map((item) => (
-            <div
-              className={`message ${item.role}`}
-              key={item.id}
-            >
-              <div className="message-role">
-                {item.role === "seller" ? "YOU" : "VIRTUAL KAM"}
-              </div>
-              <p>{item.text}</p>
-            </div>
-          ))
+          <Conversation className="conversation-feed">
+            {transcript.map((item) => (
+              <ConversationBubble
+                key={item.id}
+                align={item.role === "seller" ? "end" : "start"}
+                variant={item.role === "seller" ? "default" : "muted"}
+              >
+                <ConversationContent>
+                  <span>{item.text}</span>
+                </ConversationContent>
+              </ConversationBubble>
+            ))}
+          </Conversation>
         )}
 
         <div ref={endRef} />
@@ -141,7 +231,7 @@ export default function VoiceWorkspace() {
                 {report.sellerName} · {report.storeName}
               </p>
             </div>
-            <ClipboardCheck size={26} />
+            <div className="report-actions"><button className="download-report" onClick={downloadReport}><Download size={14}/> Download report</button><ClipboardCheck size={26} /></div>
           </div>
 
           <div className="report-summary">
@@ -237,4 +327,6 @@ export default function VoiceWorkspace() {
       )}
     </article>
   );
-}
+});
+
+export default VoiceWorkspace;
