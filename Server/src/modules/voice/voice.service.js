@@ -95,6 +95,8 @@ ${conversation}
 Return ONLY valid JSON using this structure:
 
 {
+  "sellerName": "Provided seller name",
+  "storeName": "Provided store name",
   "overallSummary": "2 short sentences summarizing the call.",
   "issues": [
     {
@@ -124,6 +126,7 @@ RULES:
 - Maximum 3 issues.
 - Maximum 3 recommendations.
 - Maximum 3 seller constraints.
+- Use the provided sellerName and storeName exactly.
 - Keep every description under 20 words.
 - Use only information supported by the transcript or seller data.
 - Do not invent seller commitments or follow-up dates.
@@ -200,10 +203,25 @@ RULES:
     !Array.isArray(report.issues) ||
     !Array.isArray(report.recommendations) ||
     !Array.isArray(report.sellerConstraints) ||
-    !report.followUp
+    !report.followUp ||
+    typeof report.followUp.timeframe !== "string" ||
+    !Array.isArray(report.followUp.metricsToReview) ||
+    typeof report.followUp.agreedNextStep !== "string"
   ) {
     throw new Error("The generated call summary is incomplete.");
   }
 
-  return report;
+  return {
+    sellerName: mockSeller.sellerName,
+    storeName: mockSeller.storeName,
+    overallSummary: report.overallSummary,
+    issues: report.issues.slice(0, 3),
+    sellerConstraints: report.sellerConstraints.slice(0, 3),
+    recommendations: report.recommendations.slice(0, 3),
+    followUp: {
+      timeframe: report.followUp.timeframe,
+      metricsToReview: report.followUp.metricsToReview.slice(0, 3),
+      agreedNextStep: report.followUp.agreedNextStep
+    }
+  };
 }

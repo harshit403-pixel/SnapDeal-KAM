@@ -4,7 +4,7 @@ WORKDIR /app
 
 COPY Client/package*.json ./
 
-RUN npm install
+RUN npm ci
 
 COPY Client/ ./
 
@@ -16,15 +16,17 @@ FROM node:24-alpine
 WORKDIR /app
 
 ENV NODE_ENV=production
+ENV PORT=8080
+ENV CLIENT_ORIGIN=http://localhost:8080
 
 COPY Server/package*.json ./
 
-RUN npm install --omit=dev
+RUN npm ci --omit=dev
 
 COPY Server/ ./
 
 COPY --from=client-build /app/dist ./public
 
-EXPOSE 3000
+EXPOSE 8080
 
-CMD ["node", "server.js"]
+CMD ["npm", "start"]

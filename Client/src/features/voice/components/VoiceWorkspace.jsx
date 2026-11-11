@@ -228,14 +228,14 @@ const VoiceWorkspace = forwardRef(function VoiceWorkspace({ onStatusChange }, re
               </div>
               <h2>Seller Action Plan</h2>
               <p>
-                {report.sellerName} · {report.storeName}
+                {report.sellerName || "Seller"} · {report.storeName || "Store"}
               </p>
             </div>
             <div className="report-actions"><button className="download-report" onClick={downloadReport}><Download size={14}/> Download report</button><ClipboardCheck size={26} /></div>
           </div>
 
           <div className="report-summary">
-            {report.overallSummary}
+            {report.overallSummary || "No summary available."}
           </div>
 
           <div className="report-section">
@@ -248,12 +248,12 @@ const VoiceWorkspace = forwardRef(function VoiceWorkspace({ onStatusChange }, re
               report.issues.map((issue, index) => (
                 <div className="report-item" key={index}>
                   <div className="report-item-heading">
-                    <strong>{issue.title}</strong>
+                    <strong>{issue.title || "Issue"}</strong>
                     <span className={`issue-status ${issue.status}`}>
-                      {issue.status}
+                      {issue.status || "confirmed"}
                     </span>
                   </div>
-                  <p>{issue.evidence}</p>
+                  <p>{issue.evidence || "No evidence provided."}</p>
                 </div>
               ))
             ) : (
@@ -284,17 +284,17 @@ const VoiceWorkspace = forwardRef(function VoiceWorkspace({ onStatusChange }, re
               Recommended actions
             </h3>
 
-            {report.recommendations?.map((item, index) => (
+            {report.recommendations?.length ? report.recommendations.map((item, index) => (
               <div className="recommendation-item" key={index}>
                 <div className="recommendation-top">
-                  <strong>{index + 1}. {item.action}</strong>
+                  <strong>{index + 1}. {item.action || "No action specified"}</strong>
                   <span className={`priority ${item.priority}`}>
                     {item.priority}
                   </span>
                 </div>
-                <p>{item.reason}</p>
+                <p>{item.reason || "No reason provided."}</p>
               </div>
-            ))}
+            )) : <p>No recommendations available.</p>}
           </div>
 
           <div className="report-section follow-up-section">
